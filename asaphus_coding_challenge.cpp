@@ -66,7 +66,11 @@ class Player {
 public:
     void takeTurn(uint32_t input_weight,
         const std::vector<std::unique_ptr<Box> >& boxes) {
-        // TODO
+        auto min_box = std::min_element(boxes.begin(), boxes.end(), [](const auto& a, const auto& b) {
+            return *a < *b;
+            });
+        (*min_box)->absorbWeight(static_cast<double>(input_weight));
+        score_ += (*min_box)->getScore();
     }
     double getScore() const { return score_; }
 
