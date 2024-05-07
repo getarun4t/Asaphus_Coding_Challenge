@@ -32,3 +32,19 @@ The rules of the game are:
   - Feel free to add more test cases, if you would like to test more.
   - This file includes the header-only test framework Catch v2.13.9.
   - A main function is not required, as it is provided by the test framework.
+
+# How to build and run the tests
+
+To build and run the tests, first clone the repository and then build the code using the following steps:
+
+```cmake -S . -B Build```
+
+```cmake --build Build```
+
+Once build is done, tests can be started using the following steps:
+
+```cd Build```
+
+```cd Debug```
+
+```./asaphus_coding_challenge.exe``` 
