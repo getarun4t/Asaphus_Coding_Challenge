@@ -43,9 +43,12 @@
 #include <memory>
 #include <numeric>
 #include <vector>
+#include <cmath>
 
 #define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include <catch2/catch.hpp>
+
+enum class BoxType { GREEN, BLUE };
 
 class Box {
 public:
@@ -54,36 +57,96 @@ public:
     static std::unique_ptr<Box> makeBlueBox(double initial_weight);
     bool operator<(const Box& rhs) const { return weight_ < rhs.weight_; }
 
-    // TODO
+    double getScore() const { return score_; }
+    double getWeight() const { return weight_; }
+    void absorbWeight(double weight);
+
+    BoxType getBoxType() const { return type_; }
+    void setBoxType() {
+        if (weight_ > 0.3) {
+            std::cout << "Type cannot be changed once game is started" << std::endl;
+        }
+
+        if (weight_ > 0.1) {
+            type_ = BoxType::BLUE;
+        }
+    }
 
 protected:
     double weight_;
+    double score_ = 0.0;
+    std::list<double> absorbed_weights_;
+    BoxType type_ = BoxType::GREEN;
 };
 
-// TODO
+void Box::absorbWeight(double weight) {
+    if (this->getBoxType() == BoxType::GREEN) {
+        absorbed_weights_.push_back(weight);
+        double mean = 0;
+        if (absorbed_weights_.size() >= 3) {
+            auto last_three_begin = absorbed_weights_.end();
+            std::advance(last_three_begin, -3);
+            mean = std::accumulate(last_three_begin, absorbed_weights_.end(), 0.0) / 3;
+        }
+        else {
+            mean = std::accumulate(absorbed_weights_.begin(), absorbed_weights_.end(), 0.0) / absorbed_weights_.size();
+        }
+        score_ = std::pow(mean, 2);
+        this->weight_ += weight;
+    }
+    else {
+        if (!absorbed_weights_.empty()) {
+            if (absorbed_weights_.front() > weight) { absorbed_weights_.push_front(weight); }
+            else if (absorbed_weights_.back() < weight) { absorbed_weights_.push_back(weight); }
+            else {
+                auto insertion_point = absorbed_weights_.end();
+                std::advance(insertion_point, -3);
+                absorbed_weights_.insert(insertion_point, weight);
+            }
+        }
+        else {
+            absorbed_weights_.push_back(weight);
+        }
+        score_ = ((absorbed_weights_.front() + absorbed_weights_.back()) * (absorbed_weights_.front() + absorbed_weights_.back() + 1)) / 2 + absorbed_weights_.back();
+        this->weight_ += weight;
+    }
+}
+
+std::unique_ptr<Box> Box::makeGreenBox(double initial_weight) {
+    return std::make_unique<Box>(initial_weight);
+}
+
+std::unique_ptr<Box> Box::makeBlueBox(double initial_weight) {
+    return std::make_unique<Box>(initial_weight);
+}
 
 class Player {
 public:
-    void takeTurn(uint32_t input_weight,
-        const std::vector<std::unique_ptr<Box> >& boxes) {
+    void takeTurn(uint32_t input_weight, std::vector<std::unique_ptr<Box>>& boxes) {
         auto min_box = std::min_element(boxes.begin(), boxes.end(), [](const auto& a, const auto& b) {
             return *a < *b;
             });
         (*min_box)->absorbWeight(static_cast<double>(input_weight));
         score_ += (*min_box)->getScore();
     }
+
     double getScore() const { return score_; }
 
 private:
-    double score_{ 0.0 };
+    double score_ = 0.0;
 };
 
+
 std::pair<double, double> play(const std::vector<uint32_t>& input_weights) {
-    std::vector<std::unique_ptr<Box> > boxes;
+    std::vector<std::unique_ptr<Box>> boxes;
     boxes.emplace_back(Box::makeGreenBox(0.0));
     boxes.emplace_back(Box::makeGreenBox(0.1));
     boxes.emplace_back(Box::makeBlueBox(0.2));
     boxes.emplace_back(Box::makeBlueBox(0.3));
+
+    for (const auto& box : boxes) {
+        box->setBoxType();
+    }
 
     Player player_A, player_B;
 
@@ -96,11 +159,12 @@ std::pair<double, double> play(const std::vector<uint32_t>& input_weights) {
             player_B.takeTurn(weight, boxes);
         }
         is_player_A_turn = !is_player_A_turn;
+    }
 
-    std::cout << "Scores: player A " << player_A.getScore() << ", player B "
-        << player_B.getScore() << std::endl;
+    std::cout << "Scores: player A " << player_A.getScore() << ", player B " << player_B.getScore() << std::endl;
     return std::make_pair(player_A.getScore(), player_B.getScore());
 }
+
 
 TEST_CASE("Final scores for first 4 Fibonacci numbers", "[fibonacci4]") {
     std::vector<uint32_t> inputs{ 1, 1, 2, 3 };
