@@ -66,7 +66,11 @@ class Player {
 public:
     void takeTurn(uint32_t input_weight,
         const std::vector<std::unique_ptr<Box> >& boxes) {
-        // TODO
+        auto min_box = std::min_element(boxes.begin(), boxes.end(), [](const auto& a, const auto& b) {
+            return *a < *b;
+            });
+        (*min_box)->absorbWeight(static_cast<double>(input_weight));
+        score_ += (*min_box)->getScore();
     }
     double getScore() const { return score_; }
 
@@ -81,7 +85,17 @@ std::pair<double, double> play(const std::vector<uint32_t>& input_weights) {
     boxes.emplace_back(Box::makeBlueBox(0.2));
     boxes.emplace_back(Box::makeBlueBox(0.3));
 
-    // TODO
+    Player player_A, player_B;
+
+    bool is_player_A_turn = true;
+    for (uint32_t weight : input_weights) {
+        if (is_player_A_turn) {
+            player_A.takeTurn(weight, boxes);
+        }
+        else {
+            player_B.takeTurn(weight, boxes);
+        }
+        is_player_A_turn = !is_player_A_turn;
 
     std::cout << "Scores: player A " << player_A.getScore() << ", player B "
         << player_B.getScore() << std::endl;
