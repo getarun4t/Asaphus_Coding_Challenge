@@ -85,7 +85,17 @@ std::pair<double, double> play(const std::vector<uint32_t>& input_weights) {
     boxes.emplace_back(Box::makeBlueBox(0.2));
     boxes.emplace_back(Box::makeBlueBox(0.3));
 
-    // TODO
+    Player player_A, player_B;
+
+    bool is_player_A_turn = true;
+    for (uint32_t weight : input_weights) {
+        if (is_player_A_turn) {
+            player_A.takeTurn(weight, boxes);
+        }
+        else {
+            player_B.takeTurn(weight, boxes);
+        }
+        is_player_A_turn = !is_player_A_turn;
 
     std::cout << "Scores: player A " << player_A.getScore() << ", player B "
         << player_B.getScore() << std::endl;
