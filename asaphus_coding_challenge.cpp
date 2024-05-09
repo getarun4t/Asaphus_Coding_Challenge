@@ -71,6 +71,7 @@ protected:
     BoxType type_ = BoxType::GREEN;
 };
 
+//Method to absorb weight into the box
 void Box::absorbWeight(double weight) {
     if (this->getBoxType() == BoxType::GREEN) {
         absorbed_weights_.emplace_back(weight);
@@ -80,39 +81,41 @@ void Box::absorbWeight(double weight) {
         if (list_size >= 3) {
             auto third_last_item_iter = last_item_iter;
             std::advance(third_last_item_iter, -3);
-            mean = std::accumulate(third_last_item_iter, last_item_iter, 0.0) / 3;
+            mean = std::accumulate(third_last_item_iter, last_item_iter, 0.0) / 3; //Calculating mean of last three elements when box absorbed more than 3 weights
         }
         else {
-            mean = std::accumulate(absorbed_weights_.begin(), last_item_iter, 0.0) / list_size;
+            mean = std::accumulate(absorbed_weights_.begin(), last_item_iter, 0.0) / list_size; //Calculating mean of all elements when box absorbed less than 3 weights
         }
         score_ = std::pow(mean, 2);
         this->weight_ += weight;
     }
     else {
         if (!absorbed_weights_.empty()) {
-            if (absorbed_weights_.front() > weight) { absorbed_weights_.emplace_front(weight); }
-            else if (absorbed_weights_.back() < weight) { absorbed_weights_.emplace_back(weight); }
+            if (absorbed_weights_.front() > weight) { absorbed_weights_.emplace_front(weight); } // adding smallest weight as first element of list
+            else if (absorbed_weights_.back() < weight) { absorbed_weights_.emplace_back(weight); } // adding largest weight as last element of list
             else {
                 auto insertion_point = absorbed_weights_.end();
-                std::advance(insertion_point, -3);
-                absorbed_weights_.insert(insertion_point, weight);
+                std::advance(insertion_point, -3); 
+                absorbed_weights_.insert(insertion_point, weight); //adding all other weights in the middle of the list
             }
         }
         else {
-            absorbed_weights_.emplace_back(weight);
+            absorbed_weights_.emplace_back(weight);  //adding first element to the list
         }
         auto first_item = absorbed_weights_.front();
         auto last_item = absorbed_weights_.back();
         double sum = first_item + last_item;
-        score_ = ((sum) * (sum + 1)) / 2 + last_item;
+        score_ = ((sum) * (sum + 1)) / 2 + last_item; //calculating Cantor's pairing function of the smallest and largest weight 
         this->weight_ += weight;
     }
 }
 
+//Initializing a green box
 std::unique_ptr<Box> Box::makeGreenBox(double initial_weight) {
     return std::make_unique<Box>(initial_weight);
 }
 
+//Initializing a blue box
 std::unique_ptr<Box> Box::makeBlueBox(double initial_weight) {
     std::unique_ptr<Box> blueBox = std::make_unique<Box>(initial_weight);
     blueBox->setBoxType(BoxType::BLUE);
@@ -122,6 +125,7 @@ std::unique_ptr<Box> Box::makeBlueBox(double initial_weight) {
 class Player {
 public:
     void takeTurn(uint32_t input_weight, std::vector<std::unique_ptr<Box>>& boxes) {
+        //finding the box with the lowest weight
         auto min_box = std::min_element(boxes.begin(), boxes.end(), [](const auto& a, const auto& b) {
             return *a < *b;
             });
@@ -144,6 +148,7 @@ std::pair<double, double> play(const std::vector<uint32_t>& input_weights) {
 
     Player player_A, player_B;
 
+    //Logic for Players taking turns
     bool is_player_A_turn = true;
     for (uint32_t weight : input_weights) {
         if (is_player_A_turn) {
