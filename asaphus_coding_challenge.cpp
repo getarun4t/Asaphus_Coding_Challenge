@@ -220,3 +220,17 @@ TEST_CASE("Test play() function with zero weights", "[play]") {
     REQUIRE(result.first == 0.0);
     REQUIRE(result.second == 0.0);
 }
+
+TEST_CASE("Test setBoxType() function", "[play]") {
+    std::vector<double> initial_weights{ 0.0, 0.1, 0.2, 0.3 };
+    std::vector<BoxType> boxes{ BoxType::GREEN, BoxType::GREEN, BoxType::BLUE, BoxType::BLUE };
+    for (int index = 0; index < initial_weights.size(); ++index) {
+        std::unique_ptr<Box> box;
+        if (initial_weights[index] < 0.2)
+            box = Box::makeGreenBox(initial_weights[index]);
+        else
+            box = Box::makeBlueBox(initial_weights[index]);
+        box->setBoxType();
+        REQUIRE(box->getBoxType() == boxes[index]);
+    }
+}
