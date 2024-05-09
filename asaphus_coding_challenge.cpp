@@ -62,15 +62,7 @@ public:
     void absorbWeight(double weight);
 
     BoxType getBoxType() const { return type_; }
-    void setBoxType() {
-        if (weight_ > 0.3) {
-            std::cout << "Type cannot be changed once game is started" << std::endl;
-        }
-
-        if (weight_ > 0.1) {
-            type_ = BoxType::BLUE;
-        }
-    }
+    void setBoxType(BoxType newType) {type_ = newType;}
 
 protected:
     double weight_;
@@ -81,23 +73,25 @@ protected:
 
 void Box::absorbWeight(double weight) {
     if (this->getBoxType() == BoxType::GREEN) {
-        absorbed_weights_.push_back(weight);
+        absorbed_weights_.emplace_back(weight);
         double mean = 0;
-        if (absorbed_weights_.size() >= 3) {
-            auto last_three_begin = absorbed_weights_.end();
-            std::advance(last_three_begin, -3);
-            mean = std::accumulate(last_three_begin, absorbed_weights_.end(), 0.0) / 3;
+        auto list_size = absorbed_weights_.size();
+        auto last_item_iter = absorbed_weights_.end();
+        if (list_size >= 3) {
+            auto third_last_item_iter = last_item_iter;
+            std::advance(third_last_item_iter, -3);
+            mean = std::accumulate(third_last_item_iter, last_item_iter, 0.0) / 3;
         }
         else {
-            mean = std::accumulate(absorbed_weights_.begin(), absorbed_weights_.end(), 0.0) / absorbed_weights_.size();
+            mean = std::accumulate(absorbed_weights_.begin(), last_item_iter, 0.0) / list_size;
         }
         score_ = std::pow(mean, 2);
         this->weight_ += weight;
     }
     else {
         if (!absorbed_weights_.empty()) {
-            if (absorbed_weights_.front() > weight) { absorbed_weights_.push_front(weight); }
-            else if (absorbed_weights_.back() < weight) { absorbed_weights_.push_back(weight); }
+            if (absorbed_weights_.front() > weight) { absorbed_weights_.emplace_front(weight); }
+            else if (absorbed_weights_.back() < weight) { absorbed_weights_.emplace_back(weight); }
             else {
                 auto insertion_point = absorbed_weights_.end();
                 std::advance(insertion_point, -3);
@@ -105,9 +99,12 @@ void Box::absorbWeight(double weight) {
             }
         }
         else {
-            absorbed_weights_.push_back(weight);
+            absorbed_weights_.emplace_back(weight);
         }
-        score_ = ((absorbed_weights_.front() + absorbed_weights_.back()) * (absorbed_weights_.front() + absorbed_weights_.back() + 1)) / 2 + absorbed_weights_.back();
+        auto first_item = absorbed_weights_.front();
+        auto last_item = absorbed_weights_.back();
+        double sum = first_item + last_item;
+        score_ = ((sum) * (sum + 1)) / 2 + last_item;
         this->weight_ += weight;
     }
 }
@@ -117,7 +114,9 @@ std::unique_ptr<Box> Box::makeGreenBox(double initial_weight) {
 }
 
 std::unique_ptr<Box> Box::makeBlueBox(double initial_weight) {
-    return std::make_unique<Box>(initial_weight);
+    std::unique_ptr<Box> blueBox = std::make_unique<Box>(initial_weight);
+    blueBox->setBoxType(BoxType::BLUE);
+    return blueBox;
 }
 
 class Player {
@@ -136,17 +135,12 @@ private:
     double score_ = 0.0;
 };
 
-
 std::pair<double, double> play(const std::vector<uint32_t>& input_weights) {
     std::vector<std::unique_ptr<Box>> boxes;
     boxes.emplace_back(Box::makeGreenBox(0.0));
     boxes.emplace_back(Box::makeGreenBox(0.1));
     boxes.emplace_back(Box::makeBlueBox(0.2));
     boxes.emplace_back(Box::makeBlueBox(0.3));
-
-    for (const auto& box : boxes) {
-        box->setBoxType();
-    }
 
     Player player_A, player_B;
 
@@ -165,7 +159,6 @@ std::pair<double, double> play(const std::vector<uint32_t>& input_weights) {
     return std::make_pair(player_A.getScore(), player_B.getScore());
 }
 
-
 TEST_CASE("Final scores for first 4 Fibonacci numbers", "[fibonacci4]") {
     std::vector<uint32_t> inputs{ 1, 1, 2, 3 };
     auto result = play(inputs);
@@ -181,33 +174,31 @@ TEST_CASE("Final scores for first 8 Fibonacci numbers", "[fibonacci8]") {
 }
 
 TEST_CASE("Test absorption of green box", "[green]") {
-    std::vector<uint32_t> inputs{ 1, 2, 3 };
+    std::vector<uint32_t> inputs{ 1, 2, 3, 4 };
     std::unique_ptr<Box> greenBox = Box::makeGreenBox(0.0);
-    greenBox->setBoxType();
-    greenBox->absorbWeight(inputs[0]);
-    REQUIRE(greenBox->getScore() == 1.0);
-    greenBox->absorbWeight(inputs[1]);
-    REQUIRE(greenBox->getScore() == 2.25);
-    greenBox->absorbWeight(inputs[2]);
-    REQUIRE(greenBox->getScore() == 4.0);
+    double expected_scores[] = { 1.0, 2.25, 4.0, 9.0 };
+
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        greenBox->absorbWeight(inputs[i]);
+        REQUIRE(greenBox->getScore() == expected_scores[i]);
+    }
 }
 
 TEST_CASE("Test absorption of blue box", "[blue]") {
-    std::vector<uint32_t> inputs{ 1, 2, 3 };
+    std::vector<uint32_t> inputs{ 2, 1, 4, 3 };
     std::unique_ptr<Box> blueBox = Box::makeBlueBox(0.2);
-    blueBox->setBoxType();
-    blueBox->absorbWeight(inputs[0]);
-    REQUIRE(blueBox->getScore() == 4);
-    blueBox->absorbWeight(inputs[1]);
-    REQUIRE(blueBox->getScore() == 8);
-    blueBox->absorbWeight(inputs[2]);
-    REQUIRE(blueBox->getScore() == 13);
+    double expected_scores[] = { 12, 8, 19, 32};
+
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        blueBox->absorbWeight(inputs[i]);
+        REQUIRE(blueBox->getScore() == expected_scores[i]);
+    }
 }
 
 TEST_CASE("Test absorption of green box with zero weights", "[green]") {
     std::unique_ptr<Box> green_box = Box::makeGreenBox(0.0);
     REQUIRE(green_box->getScore() == 0.0);
-}
+}   
 
 TEST_CASE("Test absorption of blue box with zero weights", "[blue]") {
     std::unique_ptr<Box> blue_box = Box::makeBlueBox(0.0);
